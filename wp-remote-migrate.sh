@@ -35,6 +35,21 @@ while [ ! -f "$LOCAL_WP_PATH/wp-config.php" ]; do
     fi
 done
 
+# 🛡️ Validation: Check if LOCAL_WP_PATH exists
+if [ ! -d "$LOCAL_WP_PATH" ]; then
+    echo "❌ Error: Local path $LOCAL_WP_PATH does not exist. Please set up the WP local host first."
+    exit 1
+fi
+
+LOCAL_WP_PATH=$(cd "$LOCAL_WP_PATH" && pwd)
+LOCAL_WP_CLI="wp --path=$LOCAL_WP_PATH"
+
+if ! wp core is-installed --path="$LOCAL_WP_PATH" >/dev/null 2>&1; then
+    echo "❌ WordPress is NOT installed in $LOCAL_WP_PATH or could not run WP CLI."
+    exit 1
+fi
+
+# Config file to store remote WP site credentials.
 CONFIG_FILE="$LOCAL_WP_PATH/.remote_wp_credentials"
 
 if [ -f "$CONFIG_FILE" ]; then
@@ -256,21 +271,6 @@ read -p "✅ Are these correct? (y/n): " CONFIRM
 
 if [[ "$CONFIRM" != "y" ]]; then
     echo "❌ Aborting script. Please re-run and provide correct values."
-    exit 1
-fi
-
-# 🛡️ Validation: Check if LOCAL_PATH exists
-echo ""
-if [ ! -d "$LOCAL_WP_PATH" ]; then
-    echo "❌ Error: Local path $LOCAL_WP_PATH does not exist. Please set up the WP local host first."
-    exit 1
-fi
-
-LOCAL_WP_PATH=$(cd "$LOCAL_WP_PATH" && pwd)
-LOCAL_WP_CLI="wp --path=$LOCAL_WP_PATH"
-
-if ! wp core is-installed --path="$LOCAL_WP_PATH" >/dev/null 2>&1; then
-    echo "❌ WordPress is NOT installed in $LOCAL_WP_PATH or could not run WP CLI."
     exit 1
 fi
 
