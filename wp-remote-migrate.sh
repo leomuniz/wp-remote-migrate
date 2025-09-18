@@ -506,19 +506,29 @@ if [[ "$DOWNLOAD_DB" == "yes" ]]; then
     # ===========================
     echo ""
     echo "⬇️ Copying files from remote to local site..."
-    scp -P $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/db_backup.sql .
+    # scp -P $REMOTE_PORT $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/db_backup.sql .
+
+    rsync --partial --progress -avz -e "ssh -p $REMOTE_PORT -c aes128-ctr" $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH/db_backup.sql .
 
     echo ""
     echo "Removing unwanted data from the database dump..."
-    sed -E '1s/^\xEF\xBB\xBF//; s/(\/\*![0-9]+)\\-/\1-/' db_backup.sql > temp.sql && mv temp.sql db_backup.sql
+    perl -i -pe 's/^\x{FEFF}// if $. == 1; s/(\/\*![0-9]+)\\-/$1-/' db_backup.sql
+
+     #LC_CTYPE=C sed -E '1s/^\xEF\xBB\xBF//; s/(\/\*![0-9]+)\\-/\1-/' db_backup.sql > temp.sql && mv temp.sql db_backup.sql
     echo "✅ Unwanted data removed."
+
+    # Ignore duplicate entries.
+    perl -i -pe 's/INSERT INTO/INSERT IGNORE INTO/g' db_backup.sql
+
+    #LC_CTYPE=C sed -i '' 's/INSERT INTO/INSERT IGNORE INTO/g' db_backup.sql
 
     # ========================
     # 7️⃣ Import Database
     # ========================
     echo ""
     echo "🛢️ Importing database..."
-    $LOCAL_WP_CLI db import db_backup.sql
+    $LOCAL_WP_CLI db reset --yes
+    $LOCAL_WP_CLI db import db_backup.sql --force
 
     # Delete local database dump.
     # rm db_backup.sql
